@@ -141,9 +141,26 @@ module.exports = function(tilelive, options) {
 
       return async.waterfall([
         function(done) {
-          return async.reduce(images, new mapnik.Image(tileSize, tileSize, {
+          var widths = images.map(function(im) {
+            return im.width();
+          });
+
+          var t = Math.min.apply(null, widths);
+
+          return async.reduce(images, new mapnik.Image(t, t, {
             premultiplied: true
           }), function(im1, im2, cb) {
+                if (im1.width() != t) {
+                  im1 = im1.copySync(im2.getType(), {scaling: t/im1.width()}, function(err, img2) {
+                  if (err) throw err;
+                });
+
+                if (im2.width() != t) {
+                  im2 = im2.copySync(im2.getType(), {scaling: t/im2.width()}, function(err, img2) {
+                  if (err) throw err;
+                });
+              }     
+            }
             return im1.composite(im2, {
               comp_op: mapnik.compositeOp[OPS[(layers[idx] || {})["comp-op"]] || "src_over"],
               opacity: parseFloat(layers[idx].opacity || 1),
